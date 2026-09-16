@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-
 import {ITokenizedStrategy} from "@tokenized-strategy/interfaces/ITokenizedStrategy.sol";
 
 import {ICatFactory} from "./interfaces/ICatFactory.sol";
@@ -19,8 +17,8 @@ import "forge-std/Script.sol";
 contract DeployMarket is Script {
 
     // Parameters
-    address public constant BORROW_TOKEN = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); // USDC
-    address public constant COLLATERAL_TOKEN = address(0x696d02Db93291651ED510704c9b286841d506987); // yvUSD
+    address public constant BORROW_TOKEN = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
+    address public constant COLLATERAL_TOKEN = address(0xAc37729B76db6438CE62042AE1270ee574CA7571); // yvWETH-2
 
     // Deployed contracts
     ICatFactory public constant FACTORY = ICatFactory(0xfFc787AD990dA8f73dDA2B971Dce31C0D9d2501F);
@@ -36,18 +34,18 @@ contract DeployMarket is Script {
 
         vm.startBroadcast(_pk);
 
-        // Deploy a Morpho oracle for yvUSD/USDC (vault conversion only) and wrap it in the Flex adapter
+        // Deploy a Morpho oracle for yvWETH-2/WETH (vault conversion only) and wrap it in the Flex adapter
         address _morphoOracle = MORPHO_ORACLE_FACTORY.createMorphoChainlinkOracleV2(
-            COLLATERAL_TOKEN, // baseVault: yvUSD
-            1e6, // baseVaultConversionSample
+            COLLATERAL_TOKEN, // baseVault: yvWETH-2
+            1e18, // baseVaultConversionSample
             address(0), // baseFeed1
             address(0), // baseFeed2
-            6, // baseTokenDecimals: USDC
+            18, // baseTokenDecimals: WETH
             address(0), // quoteVault
             1, // quoteVaultConversionSample
             address(0), // quoteFeed1
             address(0), // quoteFeed2
-            6, // quoteTokenDecimals: USDC
+            18, // quoteTokenDecimals: WETH
             bytes32(0) // salt
         );
         address _priceOracle = deployCode("morpho_oracle", abi.encode(_morphoOracle, BORROW_TOKEN, COLLATERAL_TOKEN));
@@ -58,7 +56,7 @@ contract DeployMarket is Script {
                 borrow_token: BORROW_TOKEN,
                 collateral_token: COLLATERAL_TOKEN,
                 price_oracle: _priceOracle,
-                minimum_debt: 500 * 10 ** IERC20Metadata(BORROW_TOKEN).decimals(), // 500 tokens
+                minimum_debt: 0.1 ether, // 0.1 WETH
                 safe_collateral_ratio: 120, // 120%
                 minimum_collateral_ratio: 110, // 110%
                 max_penalty_collateral_ratio: 105, // 105%
