@@ -8,6 +8,7 @@
         exchange rate and pricing iUSD off InfiniFi's accounting
 @dev InfiniFi's accounting prices USDC at a fixed 1, so its iUSD price is in USDC terms
 @dev InfiniFi can set the iUSD price in its accounting to any value, so we cap it at 1
+@dev The accounting's iUSD price is only used if Daddy approved it, otherwise iUSD/USDC is 1
 """
 
 from ethereum.ercs import IERC4626
@@ -24,9 +25,21 @@ implements: IPriceOracle
 
 
 # ============================================================================================
+# Events
+# ============================================================================================
+
+
+event ApproveIusdPrice:
+    iusd_price: uint256
+
+
+# ============================================================================================
 # Constants
 # ============================================================================================
 
+
+# Daddy
+DADDY: public(constant(address)) = 0x4e8341C77c94cCE982AB96d92BB28D69f4638290
 
 # Contracts
 ACCOUNTING: public(constant(IInfiniFiAccounting)) = IInfiniFiAccounting(0x7A5C5dbA4fbD0e1e1A2eCDBe752fAe55f6E842B3)
@@ -41,6 +54,15 @@ _UPPER_BOUND: constant(uint256) = 10 ** 18  # 1
 # Internal constants
 _WAD: constant(uint256) = 10 ** 18
 _ORACLE_SCALE_FACTOR: constant(uint256) = 10 ** 24  # 10^(36 + usdc_decimals - siusd_decimals)
+
+
+# ============================================================================================
+# Storage
+# ============================================================================================
+
+
+# iUSD/USDC price in InfiniFi's accounting approved by Daddy
+approved_iusd_price: public(uint256)
 
 
 # ============================================================================================
@@ -59,6 +81,9 @@ def __init__():
     # Make sure the accounting returns a sane price
     assert staticcall ACCOUNTING.price(IUSD) > 0, "!accounting"
 
+    # Start with the peg approved
+    self.approved_iusd_price = _WAD
+
 
 # ============================================================================================
 # View functions
@@ -74,8 +99,12 @@ def get_price(scaled: bool = True) -> uint256:
                   if False, returns WAD format
     @return Price scaled to the required format
     """
-    # iUSD/USDC from InfiniFi's accounting, capped at 1
-    iusd_price: uint256 = min(staticcall ACCOUNTING.price(IUSD), _UPPER_BOUND)
+    # iUSD/USDC from InfiniFi's accounting
+    iusd_price: uint256 = staticcall ACCOUNTING.price(IUSD)
+
+    # 1, unless Daddy approved it
+    if iusd_price != self.approved_iusd_price:
+        iusd_price = _WAD
 
     # siUSD --> iUSD
     iusd_per_share: uint256 = staticcall SIUSD.convertToAssets(_WAD)
@@ -88,3 +117,30 @@ def get_price(scaled: bool = True) -> uint256:
 
     # Scale price to the required format if needed and return
     return price * _ORACLE_SCALE_FACTOR // _WAD if scaled else price
+
+
+# ============================================================================================
+# Daddy functions
+# ============================================================================================
+
+
+@external
+def approve_iusd_price(iusd_price: uint256):
+    """
+    @notice Approve an iUSD/USDC price set in InfiniFi's accounting
+    @dev Only callable by Daddy
+    @dev Any other accounting price is ignored and iUSD/USDC is 1
+    @dev Cannot be above 1
+    @param iusd_price The iUSD/USDC price to approve, in WAD
+    """
+    # Make sure caller is Daddy
+    assert msg.sender == DADDY, "bad daddy"
+
+    # Make sure the price is not above 1
+    assert iusd_price <= _UPPER_BOUND, "!iusd_price"
+
+    # Approve the price
+    self.approved_iusd_price = iusd_price
+
+    # Emit event
+    log ApproveIusdPrice(iusd_price=iusd_price)
