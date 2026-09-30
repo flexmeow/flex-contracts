@@ -6,8 +6,7 @@
 @author Flex
 @notice Provides the price of siUSD in USDC by converting siUSD to iUSD through the vault
         exchange rate and pricing iUSD off InfiniFi's accounting
-@dev InfiniFi's accounting prices USDC at a fixed 1, so its iUSD price is in USDC terms
-@dev InfiniFi can set the iUSD price in its accounting to any value, so we cap it at 1
+@dev InfiniFi's accounting prices USDC at a fixed 1, but can change the price to any value
 @dev The accounting's iUSD price is only used if Daddy approved it, otherwise iUSD/USDC is 1
 """
 
