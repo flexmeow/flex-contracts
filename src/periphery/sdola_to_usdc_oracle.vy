@@ -95,7 +95,7 @@ def _get_price(scaled: bool = True) -> uint256:
                   if False, returns WAD format
     @return Price scaled to the required format
     """
-    # DOLA/USDC from the Curve EMA. `price_oracle(0)` is USDS priced in DOLA, so it is inverted
+    # DOLA/USDS from the Curve EMA, used as DOLA/USDC. `price_oracle(0)` is USDS priced in DOLA, so it is inverted
     dola_price: uint256 = min(_WAD * _WAD // staticcall CURVE_POOL.price_oracle(0), _UPPER_BOUND)
 
     # sDOLA --> DOLA
