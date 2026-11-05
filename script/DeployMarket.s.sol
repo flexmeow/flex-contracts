@@ -7,7 +7,6 @@ import {ITokenizedStrategy} from "@tokenized-strategy/interfaces/ITokenizedStrat
 
 import {ICatFactory} from "./interfaces/ICatFactory.sol";
 import {IDaddy} from "./interfaces/IDaddy.sol";
-import {IMorphoOracleFactory} from "./interfaces/IMorphoOracleFactory.sol";
 import {IRegistry} from "./interfaces/IRegistry.sol";
 
 import "forge-std/Script.sol";
@@ -19,14 +18,14 @@ import "forge-std/Script.sol";
 contract DeployMarket is Script {
 
     // Parameters
-    address public constant BORROW_TOKEN = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); // USDC
-    address public constant COLLATERAL_TOKEN = address(0x696d02Db93291651ED510704c9b286841d506987); // yvUSD
+    address public constant BORROW_TOKEN = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
+    address public constant COLLATERAL_TOKEN = address(0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0); // wstETH
+    address public constant MORPHO_ORACLE = address(0xbD60A6770b27E084E8617335ddE769241B0e71D8); // Morpho wstETH/WETH market oracle
 
     // Deployed contracts
     ICatFactory public constant FACTORY = ICatFactory(0xfFc787AD990dA8f73dDA2B971Dce31C0D9d2501F);
     IDaddy public constant DADDY = IDaddy(0x4e8341C77c94cCE982AB96d92BB28D69f4638290);
     IRegistry public constant REGISTRY = IRegistry(0x9117440a7D03238905d1C8908157Bd7a547c77c8);
-    IMorphoOracleFactory public constant MORPHO_ORACLE_FACTORY = IMorphoOracleFactory(0x3A7bB36Ee3f3eE32A60e9f2b33c1e5f2E83ad766);
 
     function run() public {
         uint256 _pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
@@ -36,21 +35,8 @@ contract DeployMarket is Script {
 
         vm.startBroadcast(_pk);
 
-        // Deploy a Morpho oracle for yvUSD/USDC (vault conversion only) and wrap it in the Flex adapter
-        address _morphoOracle = MORPHO_ORACLE_FACTORY.createMorphoChainlinkOracleV2(
-            COLLATERAL_TOKEN, // baseVault: yvUSD
-            1e6, // baseVaultConversionSample
-            address(0), // baseFeed1
-            address(0), // baseFeed2
-            6, // baseTokenDecimals: USDC
-            address(0), // quoteVault
-            1, // quoteVaultConversionSample
-            address(0), // quoteFeed1
-            address(0), // quoteFeed2
-            6, // quoteTokenDecimals: USDC
-            bytes32(0) // salt
-        );
-        address _priceOracle = deployCode("morpho_oracle", abi.encode(_morphoOracle, BORROW_TOKEN, COLLATERAL_TOKEN));
+        // Wrap Morpho's wstETH/WETH oracle (wstETH/stETH exchange rate, stETH = ETH) in the Flex adapter
+        address _priceOracle = deployCode("morpho_oracle", abi.encode(MORPHO_ORACLE, BORROW_TOKEN, COLLATERAL_TOKEN));
 
         // Deploy market
         (address _troveManager, address _sortedTroves, address _dutchDesk, address _auction, address _lender) = FACTORY.deploy(
@@ -58,12 +44,12 @@ contract DeployMarket is Script {
                 borrow_token: BORROW_TOKEN,
                 collateral_token: COLLATERAL_TOKEN,
                 price_oracle: _priceOracle,
-                minimum_debt: 500 * 10 ** IERC20Metadata(BORROW_TOKEN).decimals(), // 500 tokens
-                safe_collateral_ratio: 120, // 120%
-                minimum_collateral_ratio: 110, // 110%
-                max_penalty_collateral_ratio: 105, // 105%
+                minimum_debt: 10 ** IERC20Metadata(BORROW_TOKEN).decimals() / 10, // 0.1 tokens
+                safe_collateral_ratio: 106, // 106%
+                minimum_collateral_ratio: 104, // 104%
+                max_penalty_collateral_ratio: 102, // 102%
                 min_liquidation_fee: 50, // 0.5%
-                max_liquidation_fee: 500, // 5%
+                max_liquidation_fee: 200, // 2%
                 upfront_interest_period: 1 days,
                 interest_rate_adj_cooldown: 7 days,
                 repay_cooldown: 10 minutes,
@@ -84,7 +70,7 @@ contract DeployMarket is Script {
         // DADDY.execute(address(REGISTRY), abi.encodeWithSelector(IRegistry.endorse.selector, _troveManager), 0, true);
 
         console2.log("---------------------------------");
-        console2.log("Morpho Oracle: ", _morphoOracle);
+        console2.log("Morpho Oracle: ", MORPHO_ORACLE);
         console2.log("Price Oracle: ", _priceOracle);
         console2.log("Trove Manager: ", _troveManager);
         console2.log("Sorted Troves: ", _sortedTroves);
