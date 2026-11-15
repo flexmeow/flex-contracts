@@ -20,7 +20,7 @@ contract DeployMarket is Script {
 
     // Parameters
     address public constant BORROW_TOKEN = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); // USDC
-    address public constant COLLATERAL_TOKEN = address(0x696d02Db93291651ED510704c9b286841d506987); // yvUSD
+    address public constant COLLATERAL_TOKEN = address(0x88887bE419578051FF9F4eb6C858A951921D8888); // stcUSD
 
     // Deployed contracts
     ICatFactory public constant FACTORY = ICatFactory(0xfFc787AD990dA8f73dDA2B971Dce31C0D9d2501F);
@@ -36,13 +36,13 @@ contract DeployMarket is Script {
 
         vm.startBroadcast(_pk);
 
-        // Deploy a Morpho oracle for yvUSD/USDC (vault conversion only) and wrap it in the Flex adapter
+        // Deploy a Morpho oracle for stcUSD/USDC (vault conversion only, cUSD = USDC) and wrap it in the Flex adapter
         address _morphoOracle = MORPHO_ORACLE_FACTORY.createMorphoChainlinkOracleV2(
-            COLLATERAL_TOKEN, // baseVault: yvUSD
-            1e6, // baseVaultConversionSample
+            COLLATERAL_TOKEN, // baseVault: stcUSD
+            1e18, // baseVaultConversionSample
             address(0), // baseFeed1
             address(0), // baseFeed2
-            6, // baseTokenDecimals: USDC
+            18, // baseTokenDecimals: cUSD
             address(0), // quoteVault
             1, // quoteVaultConversionSample
             address(0), // quoteFeed1
