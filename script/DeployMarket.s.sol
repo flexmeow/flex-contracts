@@ -83,3 +83,13 @@ contract DeployMarket is Script {
     }
 
 }
+
+// ---------------------------------
+// Morpho Oracle:  0x8E3386B2f6084eB1B0988070c3d826995BD175c0
+// Price Oracle:  0x29F3293720Ae1f43ffB9521d4d70EE748297EAbe
+// Trove Manager:  0x29e3962CB7a153bFB79c2a5b4466121422154ff9
+// Sorted Troves:  0xa882F731b6a79e2f88f7bd561bAB63DcFe9c5D86
+// Dutch Desk:  0x51b27FAE4F480200571C8d27F85832748F7C2603
+// Auction:  0xC026ef38a72A81dFb6c5648C0D63aed92Cf8B86D
+// Lender:  0x25E69d5256b7c47541C203d2324BE2CD0898b507
+// ---------------------------------
